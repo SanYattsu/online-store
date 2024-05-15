@@ -1,0 +1,63 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app.kubernetes.io/component: {{ .Chart.Name }}
+    app.kubernetes.io/part-of: momo-store
+    env: {{ .Values.environment }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      containers:
+        - image: "{{ .Values.containerRegistry }}/{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          name: {{ .Chart.Name }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: default-conf
+          ports:
+            - name: frontend
+              containerPort: {{ .Values.frontend.servicePort }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.frontend.servicePort }}
+              httpHeaders:
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 5
+          volumeMounts:
+            - name: default-conf
+              mountPath: /etc/nginx/conf.d
+              readOnly: false
+            - name: log
+              mountPath: /var/log/nginx
+      volumes:
+        - name: default-conf
+          configMap:
+            name: default-conf
+            items:
+              - key: default.conf
+                path: default.conf
+        - name: log
+          emptyDir: {}
+      imagePullSecrets:
+        - name: docker-config-secret

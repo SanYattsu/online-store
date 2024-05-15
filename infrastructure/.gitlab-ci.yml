@@ -1,0 +1,41 @@
+stages:
+- release
+- deploy
+
+release-momo-store:
+  stage: release
+  image:
+    name: alpine/helm:3.14.2
+    entrypoint: [""]
+  script:
+  - helm package ./momo-chart
+  - >
+    curl --fail -v -u "${NEXUS_USER}:${NEXUS_PASSWORD}" -H "Connection: close" --upload-file ${CI_PROJECT_DIR}/momo-store-*.tgz $NEXUS_HELM_REPO/
+  rules:
+  - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    when: never
+  - changes:
+    - momo-chart/**/*
+
+deploy-momo-store:
+  stage: deploy
+  environment:
+    name: k8s
+    url: http://${MOMO_HOST}:80
+    auto_stop_in: 1h
+  image:
+    name: alpine/helm:3.14.2
+    entrypoint: [""]
+  before_script:
+  - |
+    echo $KUBE_CONFIG | base64 -d > ${CI_PROJECT_DIR}/kube-config
+    chmod go-r ${CI_PROJECT_DIR}/kube-config
+    export KUBECONFIG=${CI_PROJECT_DIR}/kube-config
+  script:
+  - helm repo add nexus --username $NEXUS_USER --password $NEXUS_PASSWORD $NEXUS_HELM_REPO
+  - helm repo update
+  - helm upgrade --install --dependency-update --set environment=stage --namespace momo --atomic momo-store ${CI_PROJECT_DIR}/momo-chart
+  rules:
+  - if: $CI_COMMIT_MESSAGE =~ /deploy/
+  - if: $CI_COMMIT_BRANCH
+    when: manual

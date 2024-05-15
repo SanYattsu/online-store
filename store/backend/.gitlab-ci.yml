@@ -1,0 +1,44 @@
+stages:
+- test
+- release
+
+include:
+- template: Security/SAST.gitlab-ci.yml
+
+sonarcloud-backend-sast:
+  stage: test
+  rules:
+  - if: $SAST_DISABLED == 'true' || $SAST_DISABLED == '1'
+    when: never
+  - if: $CI_COMMIT_BRANCH && $CI_COMMIT_MESSAGE =~ /do tests/
+    changes:
+    - backend/**/*
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+    - .sonar/cache
+  script:
+  - >
+    sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.projectKey=${SONAR_PROJECT_KEY_BACKEND} -Dsonar.host.url=${SONAR_PROJECT_URL} -Dsonar.login=${SONAR_LOGIN} -Dsonar.sources=./backend
+  allow_failure: true
+
+upload-backend-release:
+  stage: release
+  image:
+    name: docker:26.0.2-alpine3.19
+  services:
+  - name: docker:26.0.2
+    alias: docker
+  script:
+  - cd ${CI_PROJECT_DIR}/backend
+  - echo ${AUTHORIZED_KEY} | base64 -d | docker login -u json_key --password-stdin cr.yandex
+  - >
+    docker build -t cr.yandex/${YANDEX_REGISTRY}/backend:$VERSION -t cr.yandex/${YANDEX_REGISTRY}/backend:latest .
+  - docker push cr.yandex/${YANDEX_REGISTRY}/backend:$VERSION
+  - docker push cr.yandex/${YANDEX_REGISTRY}/backend:latest
+  rules:
+  - if: $CI_COMMIT_BRANCH
+    when: manual

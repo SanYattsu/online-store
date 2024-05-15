@@ -1,0 +1,27 @@
+# Default values for helm-charts.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+containerRegistry: cr.yandex/crp9fshv48uet31urbjn
+
+imagePullPolicy: IfNotPresent
+revisionHistoryLimit: 5
+environment: dev
+
+imagePullSecrets: []
+nameOverride: "momo-store"
+fullnameOverride: "momo-store-chart"
+
+frontend:
+  host: store.practi-testing.fun
+  externalIPs: [ 178.154.224.45 ]
+  image:
+    repository: frontend
+    tag: "latest"
+  replicas: 1
+  servicePort: 80
+  resourcePolicy:
+    minAllowedCPU: 0M
+    maxAllowedCPU: 800M
+    minAllowedMemory: 200Mi
+    maxAllowedMemory: 800Mi

@@ -1,0 +1,16 @@
+{
+    "builder": {
+        "gc": {
+            "defaultKeepStorage": "1GB",
+            "enabled": true
+        }
+    },
+    "debug": false,
+    "experimental": false,
+    "log-driver": "json-file",
+    "log-opts": {
+        "labels": "attrs.tag,com.docker.compose.project,com.docker.compose.service,com.docker.stack.namespace,com.docker.swarm.node.id,com.docker.swarm.service.name,com.docker.swarm.task.id",
+        "max-file": "5",
+        "max-size": "50m"
+    }
+}

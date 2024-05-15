@@ -1,0 +1,115 @@
+---
+# docker stack up -d -c ./docker-compose.swarm.yaml gitlab
+# docker stack down gitlab
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ee:16.11.0-ee.0
+    ports:
+      - "22:22"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - gitlab-data:/var/opt/gitlab
+      - gitlab-config:/etc/gitlab
+    shm_size: '256m'
+    environment:
+      TZ: ${SYSTEM_TIMEZONE:-Europe/Moscow}
+      GITLAB_LOG_LEVEL: warn
+      GITLAB_OMNIBUS_CONFIG: "from_file('/omnibus_config.rb')"
+    configs:
+      - source: omnibus_config.rb
+        target: /omnibus_config.rb
+    secrets:
+      - gitlab_root_password
+      - source: dhparam.pem
+        target: /etc/gitlab/ssl/dhparams.pem
+      - source: gitlab.crt
+        target: /etc/gitlab/ssl/gitlab.crt
+      - source: gitlab.key
+        target: /etc/gitlab/ssl/gitlab.key
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: '1.0'
+          memory: 2g
+        limits:
+          cpus: '3.0'
+          memory: 7g
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        delay: 1s
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+      restart_policy:
+        condition: any
+        delay: 5s
+    logging:
+      driver: none
+    networks:
+      overlay-network:
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    secrets:
+      - source: ca_root.crt
+        target: /etc/gitlab/ssl/ca_root.crt
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: '0.1'
+          memory: 128m
+        limits:
+          cpus: '3.0'
+          memory: 6g
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        delay: 1s
+      rollback_config:
+        parallelism: 0
+        order: start-first
+      restart_policy:
+        condition: any
+        delay: 5s
+    networks:
+      overlay-network:
+
+volumes:
+  gitlab-data:
+    driver: local
+  gitlab-config:
+    driver: local
+
+configs:
+  omnibus_config.rb:
+    file: /etc/gitlab/omnibus_config.rb
+
+secrets:
+  dhparam.pem:
+    file: /run/secrets/dhparam.pem
+  gitlab.crt:
+    file: /run/secrets/gitlab.crt
+  gitlab.key:
+    file: /run/secrets/gitlab.key
+  gitlab_root_password:
+    file: /run/secrets/gitlab.txt
+  ca_root.crt:
+    file: /run/secrets/ca_root.crt
+
+networks:
+  overlay-network:
+    driver: overlay
+    ipam:
+      config:
+        - subnet: "{{ subnet }}"

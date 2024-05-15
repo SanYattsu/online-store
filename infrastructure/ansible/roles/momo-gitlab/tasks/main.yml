@@ -1,0 +1,47 @@
+---
+# tasks file
+- name: create folders
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+  loop:
+    - /etc/gitlab
+    - /run/secrets
+
+- name: templating gitlab-secret
+  become: true
+  ansible.builtin.template:
+    src: files/gitlab.txt.j2
+    dest: /run/secrets/gitlab.txt
+    owner: root
+
+- name: templating omnibus-config
+  become: true
+  ansible.builtin.template:
+    src: files/omnibus_config.rb.j2
+    dest: /etc/gitlab/omnibus_config.rb
+    owner: root
+
+- name: templating daemon-json
+  become: true
+  ansible.builtin.template:
+    src: files/daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+  notify:
+    - reload docker
+
+- name: templating docker-compose
+  become: true
+  ansible.builtin.template:
+    src: files/docker-compose.swarm.yaml.j2
+    dest: /etc/gitlab/docker-compose.swarm.yaml
+    owner: root
+
+- name: Deploy gitlab
+  ansible.builtin.command: /usr/bin/docker stack up -d -c /etc/gitlab/docker-compose.swarm.yaml gitlab
+  become: yes
+  become_user: root

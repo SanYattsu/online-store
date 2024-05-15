@@ -1,0 +1,17 @@
+---
+# backend-service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.backend.servicePort }}
+      targetPort: {{ .Values.backend.servicePort }}
+      protocol: TCP
+  selector:
+    app: {{ .Chart.Name }}

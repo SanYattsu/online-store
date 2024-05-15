@@ -1,0 +1,18 @@
+---
+# frontend-service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}
+spec:
+  type: LoadBalancer
+  ports:
+    - port: {{ .Values.frontend.servicePort }}
+      targetPort: {{ .Values.frontend.servicePort }}
+      protocol: TCP
+  externalIPs: {{ .Values.frontend.externalIPs }}
+  selector:
+    app: {{ .Chart.Name }}

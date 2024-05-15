@@ -1,0 +1,43 @@
+#cloud-config
+ssh_pwauth: no
+groups:
+  - ${user_name}
+
+users:
+  - name: ${user_name}
+    gecos: ${user_name}
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin, wheel
+    primary_group: ${user_name}
+    ssh-authorized-keys:
+      - "${ssh_pub}"
+
+runcmd:
+  # Install k3s
+  - |
+    tee -a /etc/resolv.conf << 'EOF'
+    nameserver 8.8.8.8
+    nameserver 8.8.4.4
+    EOF
+  - apt update
+  - apt install ca-certificates curl
+  - >
+    curl -sfL https://get.k3s.io |
+    K3S_KUBECONFIG_MODE="644"
+    INSTALL_K3S_EXEC="server --tls-san ${host_ip}"
+    sh -s -
+  - ufw allow 6443/tcp
+  - ufw allow 10250/tcp
+  - ufw allow from 10.42.0.0/16
+  - ufw allow from 10.43.0.0/16
+  - ufw allow 2379/tcp
+  - ufw allow 2380/tcp
+  - ufw allow 8472/udp
+  - ufw allow 51820/udp
+  - ufw allow 51821/udp
+  - ufw allow 5001/tcp
+  - mkdir ~/.kube
+  - cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+  # Install kubectl
+  - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"

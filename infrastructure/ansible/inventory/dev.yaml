@@ -1,0 +1,11 @@
+# https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html#inventory-directory
+all:
+  children: 
+    ungrouped:
+      hosts:
+        practi-testing.fun:
+    vm-instances:
+      hosts:
+        gitlab:
+  vars: # For all host in inventory
+    ansible_connection: ssh

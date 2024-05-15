@@ -1,0 +1,5 @@
+---
+- name: gitlab deployment playbook
+  hosts: gitlab
+  roles:
+    - momo-gitlab

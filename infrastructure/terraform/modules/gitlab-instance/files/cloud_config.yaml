@@ -1,0 +1,44 @@
+#cloud-config
+ssh_pwauth: no
+groups:
+  - ${user_name}
+
+users:
+  - name: ${user_name}
+    gecos: ${user_name}
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin, wheel
+    primary_group: ${user_name}
+    ssh-authorized-keys:
+      - "${ssh_pub}"
+
+runcmd:
+  # Add nameservers to resolv.conf (temporary)
+  - |
+    tee -a /etc/resolv.conf << 'EOF'
+    nameserver 8.8.8.8
+    nameserver 8.8.4.4
+    EOF
+  # Add Docker's official GPG key:
+  - apt update
+  - apt install ca-certificates curl
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  # Add the repository to Apt sources:
+  - >
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc]
+    https://download.docker.com/linux/ubuntu
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" |
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt update
+  # Install the latest version of Docker
+  - apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin -y
+  # Add $USER to docker group
+  - usermod -aG docker igor
+  # Init swarm 
+  - docker swarm init
+  # Change ssh port of VM to 2222
+  - sed -i "s|#Port 22|Port 2222|" /etc/ssh/sshd_config
+  - systemctl restart sshd
