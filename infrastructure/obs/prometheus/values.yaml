@@ -1264,7 +1264,7 @@ alertmanager:
     - name: "default-receiver"
       telegram_configs:
       - chat_id: -4109830971
-        bot_token: "7095313644:AAHtxb4pmrG8Pkf-XHgm9Sen3zsMUwZYi9c"
+        bot_token: "$BOT_TOKEN"
         # bot_token_file
         api_url: "https://api.telegram.org"
         send_resolved: false
